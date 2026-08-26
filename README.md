@@ -81,3 +81,10 @@ requests
 pyyaml
 jmespath
 ```
+
+## About
+
+This repository is maintained as part of the TechPiece initiative focused on cloud, automation, Ansible and platform engineering.
+- YouTube: [TechPiece](https://www.youtube.com/@techpieceio)
+- LinkedIn: [Daniel Benitez Aguila](https://www.linkedin.com/in/danielbenitezaguila/?locale=es)
+
