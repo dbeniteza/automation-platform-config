@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Custom for this repo
+# Reports
+reports/generated/
+
+# Exports
+exports/
+
+# Secrets
+vault.yml
+vault.yaml
+*.vault
+
+# Ansible
+collections/
+
