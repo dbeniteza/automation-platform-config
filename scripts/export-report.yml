@@ -17,8 +17,8 @@
       {{ raw_export_directory }}/awx-export-{{ export_timestamp }}.json
     latest_export_file: "{{ raw_export_directory }}/awx-export-latest.json"
 
-    awx_controller_host: "{{ CONTROLLER_HOST }}"
-    awx_controller_token: "{{ CONTROLLER_OAUTH_TOKEN }}"
+    awx_controller_host: "{{ CONTROLLER_HOST }}" #"{{ lookup('env', 'CONTROLLER_HOST') }}"
+    awx_controller_token: "{{ CONTROLLER_OAUTH_TOKEN }}" #"{{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') }}"
     awx_validate_certs: >-
       {{
         lookup('env', 'CONTROLLER_VERIFY_SSL')
@@ -65,20 +65,20 @@
       block:
       - name: Export all supported AWX assets
         awx.awx.export:
-          #all: true
-          organizations: "all"
-          users: "all"
-          teams: "all"
-          credential_types: "all"
-          credentials: "all"
-          execution_environments: "all"
-          projects: "all"
-          inventory: "all"
-          inventory_sources: "all"
-          notification_templates: "all"
-          job_templates: "all"
-          workflow_job_templates: "all"
-          schedules: "all"
+          all: true
+          #organizations: "all"
+          #users: "all"
+          #teams: "all"
+          #credential_types: "all"
+          #credentials: "all"
+          #execution_environments: "all"
+          #projects: "all"
+          #inventory: "all"
+          #inventory_sources: "all"
+          #notification_templates: "all"
+          #job_templates: "all"
+          #workflow_job_templates: "all"
+          #schedules: "all"
           controller_host: "{{ awx_controller_host }}"
           controller_oauthtoken: "{{ awx_controller_token }}"
           validate_certs: "{{ awx_validate_certs }}"
