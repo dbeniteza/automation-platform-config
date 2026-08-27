@@ -51,7 +51,7 @@
           CONTROLLER_HOST and CONTROLLER_OAUTH_TOKEN must be defined
           before running this playbook.
         success_msg: Controller connection variables are defined.
-      no_log: true
+      #no_log: true
 
     - name: Create raw export directory
       ansible.builtin.file:
@@ -99,14 +99,14 @@
           content: "{{ awx_export.assets | to_nice_json }}"
           dest: "{{ export_file }}"
           mode: "0600"
-        no_log: true
+        #no_log: true
 
       - name: Save latest raw export
         ansible.builtin.copy:
           content: "{{ awx_export.assets | to_nice_json }}"
           dest: "{{ latest_export_file }}"
           mode: "0600"
-        no_log: true
+        #no_log: true
 
       - name: Calculate total number of exported assets
         ansible.builtin.set_fact:
