@@ -1,0 +1,4 @@
+controller_host: https://<awx-url>
+controller_username: admin
+controller_password: "{{ vault_awx_password }}"
+validate_certs: false

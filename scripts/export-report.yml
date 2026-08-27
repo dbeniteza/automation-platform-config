@@ -1,0 +1,280 @@
+---
+- name: Export AWX inventory and generate report
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  collections:
+    - awx.awx
+
+  vars:
+    repository_root: "{{ playbook_dir | dirname }}"
+    raw_export_directory: "{{ repository_root }}/exports/raw"
+    report_file: "{{ repository_root }}/docs/inventory-report.md"
+
+    export_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    export_file: >-
+      {{ raw_export_directory }}/awx-export-{{ export_timestamp }}.json
+    latest_export_file: "{{ raw_export_directory }}/awx-export-latest.json"
+
+    awx_controller_host: "{{ lookup('env', 'CONTROLLER_HOST') }}"
+    awx_controller_token: "{{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') }}"
+    awx_validate_certs: >-
+      {{
+        lookup('env', 'CONTROLLER_VERIFY_SSL')
+        | default('false', true)
+        | bool
+      }}
+
+    expected_asset_types:
+      - organizations
+      - users
+      - teams
+      - credential_types
+      - credentials
+      - execution_environments
+      - projects
+      - inventories
+      - inventory_sources
+      - notification_templates
+      - job_templates
+      - workflow_job_templates
+      - schedules
+
+  pre_tasks:
+    - name: Validate required controller environment variables
+      ansible.builtin.assert:
+        that:
+          - awx_controller_host | length > 0
+          - awx_controller_token | length > 0
+        fail_msg: >-
+          CONTROLLER_HOST and CONTROLLER_OAUTH_TOKEN must be defined
+          before running this playbook.
+        success_msg: Controller connection variables are defined.
+      no_log: true
+
+    - name: Create raw export directory
+      ansible.builtin.file:
+        path: "{{ raw_export_directory }}"
+        state: directory
+        mode: "0750"
+
+  tasks:
+
+    - name: Export AWX assets
+      block:
+      - name: Export all supported AWX assets
+        awx.awx.export:
+          #all: true
+          organizations: "all"
+          users: "all"
+          teams: "all"
+          credential_types: "all"
+          credentials: "all"
+          execution_environments: "all"
+          projects: "all"
+          inventory: "all"
+          inventory_sources: "all"
+          notification_templates: "all"
+          job_templates: "all"
+          workflow_job_templates: "all"
+          schedules: "all"
+          controller_host: "{{ awx_controller_host }}"
+          controller_oauthtoken: "{{ awx_controller_token }}"
+          validate_certs: "{{ awx_validate_certs }}"
+          request_timeout: 600 # Adjust timeout
+        register: awx_export
+        #no_log: true
+
+      - name: Validate export result
+        ansible.builtin.assert:
+          that:
+            - awx_export.assets is defined
+            - awx_export.assets is mapping
+          fail_msg: AWX export did not return a valid assets dictionary.
+          success_msg: AWX assets exported successfully.
+
+      - name: Save timestamped raw export
+        ansible.builtin.copy:
+          content: "{{ awx_export.assets | to_nice_json }}"
+          dest: "{{ export_file }}"
+          mode: "0600"
+        no_log: true
+
+      - name: Save latest raw export
+        ansible.builtin.copy:
+          content: "{{ awx_export.assets | to_nice_json }}"
+          dest: "{{ latest_export_file }}"
+          mode: "0600"
+        no_log: true
+
+      - name: Calculate total number of exported assets
+        ansible.builtin.set_fact:
+          total_exported_assets: >-
+            {%- set result = namespace(total=0) -%}
+            {%- for asset_type in expected_asset_types -%}
+            {%- set result.total = result.total
+                + (awx_export.assets.get(asset_type, []) | length) -%}
+            {%- endfor -%}
+            {{ result.total }}
+
+      - name: Generate AWX inventory report
+        ansible.builtin.copy:
+          dest: "{{ report_file }}"
+          mode: "0644"
+          content: |
+            # AWX Inventory Report
+
+            ## Report Information
+
+            | Field | Value |
+            |---|---|
+            | Generated | {{ ansible_date_time.iso8601 }} |
+            | Source Platform | AWX |
+            | Controller | {{ awx_controller_host }} |
+            | Export File | `exports/raw/awx-export-{{ export_timestamp }}.json` |
+            | Total Exported Assets | {{ total_exported_assets | int }} |
+
+            ## Controller Inventory Summary
+
+            | Resource Type | Count |
+            |---|---:|
+            | Organizations | {{ awx_export.assets.get('organizations', []) | length }} |
+            | Users | {{ awx_export.assets.get('users', []) | length }} |
+            | Teams | {{ awx_export.assets.get('teams', []) | length }} |
+            | Credential Types | {{ awx_export.assets.get('credential_types', []) | length }} |
+            | Credentials | {{ awx_export.assets.get('credentials', []) | length }} |
+            | Execution Environments | {{ awx_export.assets.get('execution_environments', []) | length }} |
+            | Projects | {{ awx_export.assets.get('projects', []) | length }} |
+            | Inventories | {{ awx_export.assets.get('inventories', []) | length }} |
+            | Inventory Sources | {{ awx_export.assets.get('inventory_sources', []) | length }} |
+            | Notification Templates | {{ awx_export.assets.get('notification_templates', []) | length }} |
+            | Job Templates | {{ awx_export.assets.get('job_templates', []) | length }} |
+            | Workflow Job Templates | {{ awx_export.assets.get('workflow_job_templates', []) | length }} |
+            | Schedules | {{ awx_export.assets.get('schedules', []) | length }} |
+
+            ## Organizations
+
+            {% for item in awx_export.assets.get('organizations', []) %}
+            - **{{ item.name | default('Unnamed organization') }}**
+            {% else %}
+            No organizations were included in the export.
+            {% endfor %}
+
+            ## Teams
+
+            {% for item in awx_export.assets.get('teams', []) %}
+            - **{{ item.name | default('Unnamed team') }}**
+              {% if item.organization is defined %}
+              - Organization: {{ item.organization.name | default(item.organization) }}
+              {% endif %}
+            {% else %}
+            No teams were included in the export.
+            {% endfor %}
+
+            ## Projects
+
+            {% for item in awx_export.assets.get('projects', []) %}
+            - **{{ item.name | default('Unnamed project') }}**
+              {% if item.scm_url is defined and item.scm_url %}
+              - SCM URL: `{{ item.scm_url }}`
+              {% endif %}
+              {% if item.scm_branch is defined and item.scm_branch %}
+              - SCM Branch: `{{ item.scm_branch }}`
+              {% endif %}
+            {% else %}
+            No projects were included in the export.
+            {% endfor %}
+
+            ## Inventories
+
+            {% for item in awx_export.assets.get('inventories', []) %}
+            - **{{ item.name | default('Unnamed inventory') }}**
+              {% if item.organization is defined %}
+              - Organization: {{ item.organization.name | default(item.organization) }}
+              {% endif %}
+            {% else %}
+            No inventories were included in the export.
+            {% endfor %}
+
+            ## Execution Environments
+
+            {% for item in awx_export.assets.get('execution_environments', []) %}
+            - **{{ item.name | default('Unnamed execution environment') }}**
+              {% if item.image is defined %}
+              - Image: `{{ item.image }}`
+              {% endif %}
+            {% else %}
+            No execution environments were included in the export.
+            {% endfor %}
+
+            ## Job Templates
+
+            {% for item in awx_export.assets.get('job_templates', []) %}
+            - **{{ item.name | default('Unnamed job template') }}**
+              {% if item.playbook is defined %}
+              - Playbook: `{{ item.playbook }}`
+              {% endif %}
+            {% else %}
+            No job templates were included in the export.
+            {% endfor %}
+
+            ## Workflow Job Templates
+
+            {% for item in awx_export.assets.get('workflow_job_templates', []) %}
+            - **{{ item.name | default('Unnamed workflow') }}**
+            {% else %}
+            No workflow job templates were included in the export.
+            {% endfor %}
+
+            ## Credential Summary
+
+            The raw export can contain credential metadata and encrypted placeholders.
+            Secret values must not be committed to Git.
+
+            | Credential | Type |
+            |---|---|
+            {% for item in awx_export.assets.get('credentials', []) %}
+            | {{ item.name | default('Unnamed credential') }} | {{ item.credential_type.name | default(item.credential_type) | default('Unknown') }} |
+            {% else %}
+            | No credentials exported | N/A |
+            {% endfor %}
+
+            ## Migration Readiness
+
+            - [ ] Organizations reviewed
+            - [ ] Users and teams reviewed
+            - [ ] Custom credential types reviewed
+            - [ ] Credentials mapped to the target secret-management model
+            - [ ] Projects and SCM credentials validated
+            - [ ] Inventories and inventory sources validated
+            - [ ] Execution Environment images documented
+            - [ ] Job Templates tested against the target AAP environment
+            - [ ] Workflow dependencies documented
+            - [ ] Schedules reviewed before enabling them in AAP
+            - [ ] Notification integrations validated
+            - [ ] RBAC model reviewed
+            - [ ] Sensitive content excluded from Git
+
+            ## Notes
+
+            This report is generated from the `awx.awx.export` output. Some
+            controller resources, secrets, platform settings, instance groups,
+            authentication settings, and external integrations may require
+            separate discovery and migration activities.
+
+      - name: Display report summary
+        ansible.builtin.debug:
+          msg:
+            - "Export completed successfully."
+            - "Total exported assets: {{ total_exported_assets | int }}"
+            - "Latest export: {{ latest_export_file }}"
+            - "Inventory report: {{ report_file }}"
+
+      rescue:
+        - name: Report export failure
+          ansible.builtin.fail:
+            msg: >-
+              AWX export failed. Temporarily remove no_log from the export
+              task and run the playbook with -vvv to retrieve the underlying
+              module error.

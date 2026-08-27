@@ -1,8 +1,18 @@
-# Automation Platform Config
+# Automation Platform Configuration
 
-Configuration, assessment and migration framework for AWX and Red Hat Ansible Automation Platform (AAP).
+This repository contains the Automation Office platform configuration and inventory.
 
-This repository provides Ansible playbooks and roles to:
+## Purpose
+
+This repository serves as:
+
+- Source of Truth for platform configuration
+- AWX inventory repository
+- AWX backup repository
+- AWX to AAP migration repository
+- Configuration as Code repository
+
+It contains Ansible playbooks and roles to:
 
 - Inventory existing AWX environments
 - Export AWX configuration
@@ -16,6 +26,33 @@ The framework uses:
 
 - awx.awx
 - configify.aapconfig
+
+## Areas Covered
+
+- Organizations
+- Teams
+- Users
+- Credentials
+- Projects
+- Inventories
+- Job Templates
+- Workflow Templates
+- Execution Environments
+- Integrations
+
+## Platform
+
+Current Platform:
+- AWX
+- Kubernetes
+- AWX Operator 2.19.1
+
+Target Platform:
+- Red Hat Ansible Automation Platform (AAP)
+
+## Related Documentation
+
+See /docs
 
 ## Use Cases
 

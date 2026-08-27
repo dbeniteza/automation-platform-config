@@ -1,0 +1,22 @@
+---
+- name: Export AWX Platform
+  hosts: localhost
+  gather_facts: false
+
+  collections:
+    - awx.awx
+
+  vars:
+    output_dir: "../exports/raw"
+
+  tasks:
+
+    - name: Export controller assets
+      awx.awx.export:
+        all: true
+      register: awx_export
+
+    - name: Save export
+      copy:
+        content: "{{ awx_export.assets | to_nice_json }}"
+        dest: "{{ output_dir }}/awx-export.json"
