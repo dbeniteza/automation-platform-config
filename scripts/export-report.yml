@@ -2,7 +2,7 @@
 - name: Export AWX inventory and generate report
   hosts: localhost
   connection: local
-  gather_facts: true
+  gather_facts: false
 
   collections:
     - awx.awx
@@ -12,7 +12,7 @@
     raw_export_directory: "{{ repository_root }}/exports/raw"
     report_file: "{{ repository_root }}/docs/inventory-report.md"
 
-    export_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    export_timestamp: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
     export_file: >-
       {{ raw_export_directory }}/awx-export-{{ export_timestamp }}.json
     latest_export_file: "{{ raw_export_directory }}/awx-export-latest.json"
@@ -129,7 +129,7 @@
 
             | Field | Value |
             |---|---|
-            | Generated | {{ ansible_date_time.iso8601 }} |
+            | Generated | {{ lookup('pipe','date -Iseconds') }} |
             | Source Platform | AWX |
             | Controller | {{ awx_controller_host }} |
             | Export File | `exports/raw/awx-export-{{ export_timestamp }}.json` |
