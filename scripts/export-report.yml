@@ -17,8 +17,8 @@
       {{ raw_export_directory }}/awx-export-{{ export_timestamp }}.json
     latest_export_file: "{{ raw_export_directory }}/awx-export-latest.json"
 
-    awx_controller_host: "{{ lookup('env', 'CONTROLLER_HOST') }}"
-    awx_controller_token: "{{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') }}"
+    awx_controller_host: "{{ CONTROLLER_HOST }}"
+    awx_controller_token: "{{ CONTROLLER_OAUTH_TOKEN }}"
     awx_validate_certs: >-
       {{
         lookup('env', 'CONTROLLER_VERIFY_SSL')
